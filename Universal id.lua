@@ -1,187 +1,133 @@
---[[
-    Game/Place ID Finder + Copy Hub
-    - Descobre UniverseId (Game ID) e PlaceId do jogo atual
-    - Hub com botões pra copiar cada ID
-    - Funciona em executors (Synapse/Delta/etc) ou via LocalScript em StarterPlayerScripts
-]]
+
+--// ID HUB STANDALONE
+--// Place ID + Universal ID + Copy
+--// Made by @ronzy.exe on Discord
 
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
-
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
--- ========== API ==========
-local function getPlaceId()
-    return game.PlaceId
-end
+local placeId = tostring(game.PlaceId)
+local gameId = tostring(game.GameId)
 
-local function getUniverseIdFromPlace(placeId)
-    local url = ("https://apis.roblox.com/universes/v1/places/%d/universe"):format(placeId)
-    local ok, res = pcall(function()
-        return HttpService:GetAsync(url)
-    end)
-    if not ok or not res then return nil, "HttpService bloqueado/erro" end
-    local ok2, data = pcall(function() return HttpService:JSONDecode(res) end)
-    if not ok2 or not data then return nil, "JSON inválido" end
-    return data.universeId
-end
+local old = playerGui:FindFirstChild("StandaloneIDHub")
+if old then old:Destroy() end
 
-local function getUniverseIdFromGame(gameId)
-    local url = ("https://games.roblox.com/v1/games?universeIds=%d"):format(gameId)
-    local ok, res = pcall(function()
-        return HttpService:GetAsync(url)
-    end)
-    if not ok or not res then return nil end
-    local ok2, data = pcall(function() return HttpService:JSONDecode(res) end)
-    if not ok2 or not data or not data.data or not data.data[1] then return nil end
-    return data.data[1].id
-end
+local gui = Instance.new("ScreenGui")
+gui.Name = "StandaloneIDHub"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
 
--- ========== UI ==========
-local function makeHub()
-    local old = player.PlayerGui:FindFirstChild("IDFinderHub")
-    if old then old:Destroy() end
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(320, 205)
+frame.Position = UDim2.new(0.5, -160, 0.5, -102)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 29)
+frame.BorderSizePixel = 0
+frame.Parent = gui
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "IDFinderHub"
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = player.PlayerGui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 340, 0, 260)
-    frame.Position = UDim2.new(0.5, -170, 0.5, -130)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-    frame.BorderSizePixel = 0
-    frame.Active = true
-    frame.Draggable = true
-    frame.Parent = gui
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(139, 92, 246)
+stroke.Thickness = 1.5
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
-
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(0, 170, 255)
-    stroke.Thickness = 2
-    stroke.Parent = frame
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.BackgroundTransparency = 1
-    title.Text = "ID FINDER HUB"
-    title.TextColor3 = Color3.fromRGB(0, 200, 255)
-    title.Font = Enum.Font.GothamBlack
-    title.TextSize = 20
-    title.Parent = frame
-
-    local close = Instance.new("TextButton")
-    close.Size = UDim2.new(0, 30, 0, 30)
-    close.Position = UDim2.new(1, -35, 0, 5)
-    close.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    close.Text = "X"
-    close.TextColor3 = Color3.new(1,1,1)
-    close.Font = Enum.Font.GothamBold
-    close.TextSize = 14
-    close.BorderSizePixel = 0
-    local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(0,6); cc.Parent = close
-    close.Parent = frame
-    close.MouseButton1Click:Connect(function() gui:Destroy() end)
-
-    local function makeRow(labelText, yOffset, valueProvider)
-        local lbl = Instance.new("TextLabel")
-        lbl.Size = UDim2.new(0, 200, 0, 22)
-        lbl.Position = UDim2.new(0, 15, 0, yOffset)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = labelText
-        lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-        lbl.Font = Enum.Font.GothamSemibold
-        lbl.TextSize = 14
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        lbl.Parent = frame
-
-        local val = Instance.new("TextLabel")
-        val.Size = UDim2.new(0, 300, 0, 22)
-        val.Position = UDim2.new(0, 15, 0, yOffset + 22)
-        val.BackgroundTransparency = 1
-        val.Text = "..."
-        val.TextColor3 = Color3.fromRGB(255, 255, 255)
-        val.Font = Enum.Font.Code
-        val.TextSize = 14
-        val.TextXAlignment = Enum.TextXAlignment.Left
-        val.Parent = frame
-
-        local copy = Instance.new("TextButton")
-        copy.Size = UDim2.new(0, 80, 0, 26)
-        copy.Position = UDim2.new(1, -95, 0, yOffset + 20)
-        copy.BackgroundColor3 = Color3.fromRGB(0, 150, 90)
-        copy.Text = "COPIAR"
-        copy.TextColor3 = Color3.new(1,1,1)
-        copy.Font = Enum.Font.GothamBold
-        copy.TextSize = 12
-        copy.BorderSizePixel = 0
-        local c2 = Instance.new("UICorner"); c2.CornerRadius = UDim.new(0,6); c2.Parent = copy
-        copy.Parent = frame
-
-        copy.MouseButton1Click:Connect(function()
-            local v = valueProvider()
-            if not v or v == "" then
-                copy.Text = "VAZIO"
-                task.wait(1); copy.Text = "COPIAR"; return
-            end
-            if setclipboard then
-                setclipboard(tostring(v))
-                copy.Text = "OK!"
-            else
-                copy.Text = "N/A"
-            end
-            task.wait(1); copy.Text = "COPIAR"
-        end)
-
-        return val, function(v) val.Text = tostring(v) end
+local function make(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        obj[k] = v
     end
+    obj.Parent = parent
+    return obj
+end
 
-    local placeLabel, setPlace = makeRow("PLACE ID:", 55, function() return game.PlaceId end)
-    local uniLabel,   setUni   = makeRow("UNIVERSE (GAME) ID:", 115, function() return uniLabel.Text end)
+make("TextLabel", {
+    Size = UDim2.new(1, -50, 0, 38),
+    Position = UDim2.fromOffset(14, 5),
+    BackgroundTransparency = 1,
+    Text = "ID HUB",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 19,
+    Font = Enum.Font.GothamBold,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, frame)
 
-    -- resolve IDs
-    setPlace(game.PlaceId)
+local close = make("TextButton", {
+    Size = UDim2.fromOffset(30, 30),
+    Position = UDim2.new(1, -38, 0, 8),
+    BackgroundColor3 = Color3.fromRGB(55, 43, 66),
+    Text = "X",
+    TextColor3 = Color3.new(1, 1, 1),
+    TextSize = 14,
+    Font = Enum.Font.GothamBold
+}, frame)
+Instance.new("UICorner", close).CornerRadius = UDim.new(0, 7)
+close.Activated:Connect(function() gui:Destroy() end)
 
-    task.spawn(function()
-        local uni = getUniverseIdFromPlace(game.PlaceId)
-        if not uni then
-            uni = getUniverseIdFromGame(game.PlaceId)
+local function addRow(y, labelText, value)
+    make("TextLabel", {
+        Size = UDim2.new(1, -24, 0, 18),
+        Position = UDim2.fromOffset(12, y),
+        BackgroundTransparency = 1,
+        Text = labelText,
+        TextColor3 = Color3.fromRGB(175, 175, 195),
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, frame)
+
+    local valueLabel = make("TextLabel", {
+        Size = UDim2.new(1, -105, 0, 32),
+        Position = UDim2.fromOffset(12, y + 18),
+        BackgroundTransparency = 1,
+        Text = value,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 15,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    }, frame)
+
+    local copy = make("TextButton", {
+        Size = UDim2.fromOffset(78, 29),
+        Position = UDim2.new(1, -90, 0, y + 19),
+        BackgroundColor3 = Color3.fromRGB(124, 76, 220),
+        Text = "COPIAR",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = 11,
+        Font = Enum.Font.GothamBold
+    }, frame)
+    Instance.new("UICorner", copy).CornerRadius = UDim.new(0, 6)
+
+    copy.Activated:Connect(function()
+        local clipboard = setclipboard or toclipboard or set_clipboard
+        if type(clipboard) == "function" then
+            local ok = pcall(clipboard, value)
+            if ok then
+                copy.Text = "COPIADO!"
+                task.delay(1.2, function()
+                    if copy.Parent then copy.Text = "COPIAR" end
+                end)
+                return
+            end
         end
-        if uni then
-            setUni(uni)
-        else
-            setUni("Não foi possível obter (HttpService/API).")
-        end
+
+        valueLabel.Text = value
+        copy.Text = "SEM CLIPBOARD"
+        task.delay(1.5, function()
+            if copy.Parent then copy.Text = "COPIAR" end
+        end)
     end)
-
-    local info = Instance.new("TextLabel")
-    info.Size = UDim2.new(1, -30, 0, 20)
-    info.Position = UDim2.new(0, 15, 1, -30)
-    info.BackgroundTransparency = 1
-    info.Text = "Made by @ronzy.exe | discord.gg/76tHHGBrfz"
-    info.TextColor3 = Color3.fromRGB(120, 120, 140)
-    info.Font = Enum.Font.Gotham
-    info.TextSize = 11
-    info.TextXAlignment = Enum.TextXAlignment.Left
-    info.Parent = frame
-
-    return gui
 end
 
--- ========== RUN ==========
-local ok, err = pcall(makeHub)
-if not ok then
-    warn("[ID Finder] falhou: " .. tostring(err))
-end
+addRow(48, "PLACE ID", placeId)
+addRow(119, "UNIVERSAL ID / GAME ID", gameId)
 
--- ========== API global opcional ==========
-_G.IDFinder = {
-    placeId = game.PlaceId,
-    getUniverseId = getUniverseIdFromPlace,
-}
+make("TextLabel", {
+    Size = UDim2.new(1, -20, 0, 15),
+    Position = UDim2.new(0, 10, 1, -18),
+    BackgroundTransparency = 1,
+    Text = "STANDALONE • GAME IDS",
+    TextColor3 = Color3.fromRGB(130, 130, 150),
+    TextSize = 9,
+    Font = Enum.Font.GothamMedium
+}, frame)
