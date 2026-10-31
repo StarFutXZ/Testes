@@ -105,8 +105,8 @@ toggleButton.Parent = pill
 -- Painel principal.
 local main = Instance.new("Frame")
 main.Name = "MainPanel"
-main.Size = UDim2.new(0.78, 0, 0.65, 0)
-main.Position = UDim2.new(0.11, 0, 0.19, 0)
+main.Size = UDim2.new(0.74, 0, 0.62, 0)
+main.Position = UDim2.new(0.13, 0, 0.22, 0)
 main.BackgroundColor3 = C.panel
 main.BackgroundTransparency = 0.05
 main.Parent = gui
@@ -114,29 +114,29 @@ round(main, 14)
 outline(main, 1.5)
 
 local sizeConstraint = Instance.new("UISizeConstraint")
-sizeConstraint.MinSize = Vector2.new(360, 300)
-sizeConstraint.MaxSize = Vector2.new(1200, 650)
+sizeConstraint.MinSize = Vector2.new(330, 270)
+sizeConstraint.MaxSize = Vector2.new(1050, 600)
 sizeConstraint.Parent = main
 
 local sidebar = Instance.new("Frame")
 sidebar.Name = "Sidebar"
 sidebar.BackgroundTransparency = 1
-sidebar.Size = UDim2.new(0, 178, 1, -20)
-sidebar.Position = UDim2.fromOffset(10, 10)
+sidebar.Size = UDim2.new(0, 158, 1, -20)
+sidebar.Position = UDim2.fromOffset(8, 10)
 sidebar.Parent = main
 
 local divider = Instance.new("Frame")
-divider.Size = UDim2.new(0, 2, 1, -116)
-divider.Position = UDim2.new(1, -7, 0, 25)
+divider.Size = UDim2.new(0, 2, 1, -92)
+divider.Position = UDim2.new(1, -3, 0, 14)
 divider.BackgroundColor3 = C.stroke
 divider.BorderSizePixel = 0
 divider.Parent = sidebar
 
 local games = {"Blade Ball", "BloxStrike", "Doors", "Dead Rails", "Rivals", "MM2", "Sniper Arena"}
-local selectedLabel = makeLabel(main, "Seleciona um jogo", UDim2.new(1, -220, 0, 34), UDim2.new(0, 205, 0, 54), Enum.Font.Garamond, 21)
+local selectedLabel = makeLabel(main, "Seleciona um jogo", UDim2.new(1, -190, 0, 32), UDim2.new(0, 178, 0, 48), Enum.Font.Garamond, 21)
 selectedLabel.TextColor3 = C.muted
 
-local hint = makeLabel(main, "O teu conteúdo aparece aqui", UDim2.new(1, -240, 0, 26), UDim2.new(0, 215, 0, 92), Enum.Font.Garamond, 16)
+local hint = makeLabel(main, "O teu conteúdo aparece aqui", UDim2.new(1, -205, 0, 26), UDim2.new(0, 190, 0, 84), Enum.Font.Garamond, 16)
 hint.TextColor3 = C.muted
 
 local function onGameSelected(gameName)
@@ -145,16 +145,43 @@ local function onGameSelected(gameName)
     -- Liga aqui a interface ou funcionalidade legítima correspondente.
 end
 
+-- Lista de jogos com scroll; fica sempre dentro da sidebar e acima do perfil.
+local gameList = Instance.new("ScrollingFrame")
+gameList.Name = "GameList"
+gameList.BackgroundTransparency = 1
+gameList.BorderSizePixel = 0
+gameList.Position = UDim2.fromOffset(4, 4)
+gameList.Size = UDim2.new(1, -12, 1, -76)
+gameList.CanvasSize = UDim2.new(0, 0, 0, 0)
+gameList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+gameList.ScrollingDirection = Enum.ScrollingDirection.Y
+gameList.ScrollBarThickness = 3
+gameList.ScrollBarImageColor3 = C.stroke
+gameList.Parent = sidebar
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 9)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+listLayout.Parent = gameList
+
+local listPadding = Instance.new("UIPadding")
+listPadding.PaddingTop = UDim.new(0, 2)
+listPadding.PaddingBottom = UDim.new(0, 6)
+listPadding.PaddingLeft = UDim.new(0, 2)
+listPadding.PaddingRight = UDim.new(0, 2)
+listPadding.Parent = gameList
+
 for i, gameName in ipairs(games) do
-    local button = makeButton(sidebar, gameName, UDim2.fromOffset(135, 39), UDim2.fromOffset(12, 10 + (i-1)*53), 18)
+    local button = makeButton(gameList, gameName, UDim2.new(1, -8, 0, 36), UDim2.new(), 16)
+    button.LayoutOrder = i
     button.Activated:Connect(function()
         onGameSelected(gameName)
     end)
 end
 
--- Espaço extra, igual ao botão vazio do desenho.
-local emptyButton = makeButton(sidebar, "", UDim2.fromOffset(135, 39), UDim2.fromOffset(12, 10 + #games*53), 18)
-emptyButton.Text = "+"
+local emptyButton = makeButton(gameList, "+", UDim2.new(1, -8, 0, 34), UDim2.new(), 16)
+emptyButton.LayoutOrder = #games + 1
 emptyButton.TextColor3 = C.muted
 emptyButton.Activated:Connect(function()
     hint.Text = "Adiciona um jogo à lista no código Lua"
@@ -163,8 +190,8 @@ end)
 -- Cartão de perfil no canto inferior esquerdo.
 local profile = Instance.new("Frame")
 profile.Name = "ProfileCard"
-profile.Size = UDim2.fromOffset(190, 62)
-profile.Position = UDim2.new(0, -2, 1, -67)
+profile.Size = UDim2.new(1, -2, 0, 48)
+profile.Position = UDim2.new(0, 0, 1, -50)
 profile.BackgroundColor3 = C.panel2
 profile.BackgroundTransparency = 0.08
 profile.Parent = sidebar
@@ -173,8 +200,8 @@ outline(profile, 1.4)
 
 local avatar = Instance.new("ImageLabel")
 avatar.Name = "Avatar"
-avatar.Size = UDim2.fromOffset(48, 48)
-avatar.Position = UDim2.fromOffset(7, 7)
+avatar.Size = UDim2.fromOffset(36, 36)
+avatar.Position = UDim2.fromOffset(5, 6)
 avatar.BackgroundColor3 = C.panel
 avatar.Parent = profile
 round(avatar, 24)
@@ -189,8 +216,8 @@ task.spawn(function()
     if ok then avatar.Image = imageUrl end
 end)
 
-makeLabel(profile, player.DisplayName, UDim2.new(1, -64, 0, 27), UDim2.fromOffset(58, 7), Enum.Font.Garamond, 17)
-makeLabel(profile, "♧  Lifetime", UDim2.new(1, -64, 0, 20), UDim2.fromOffset(58, 32), Enum.Font.Garamond, 13).TextColor3 = C.muted
+makeLabel(profile, player.DisplayName, UDim2.new(1, -48, 0, 21), UDim2.fromOffset(44, 3), Enum.Font.Garamond, 14)
+makeLabel(profile, "♧  Lifetime", UDim2.new(1, -48, 0, 17), UDim2.fromOffset(44, 24), Enum.Font.Garamond, 11).TextColor3 = C.muted
 
 local minimize = makeButton(main, "−", UDim2.fromOffset(39, 39), UDim2.new(1, -105, 0, 19), 26)
 local close = makeButton(main, "×", UDim2.fromOffset(39, 39), UDim2.new(1, -57, 0, 19), 24)
