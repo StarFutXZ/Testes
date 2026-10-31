@@ -1,265 +1,490 @@
--- Eclipse Hub | Interface Lua para Roblox
--- Interface visual baseada no desenho fornecido. Os botões de jogos são apenas seletores;
--- liga aqui os teus próprios módulos legítimos em onGameSelected().
+--[[
+    ECLIPSE HUB — UI ONLY
+    Reprodução inspirada na referência enviada:
+    - Painel preto minimalista com contorno fino
+    - Lista de jogos com scroll
+    - Cartão de perfil e estado da key
+    - Modo compacto/fechado
+    - Janela arrastável
+    - Sem funções de gameplay incluídas; os botões selecionam o jogo visualmente.
+
+    Instalação: coloca este código num LocalScript em StarterPlayerScripts
+    ou StarterGui no Roblox Studio.
+]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+
 local player = Players.LocalPlayer
+if not player then
+    return
+end
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "EclipseHub"
-gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = true
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+local PLAYER_GUI = player:WaitForChild("PlayerGui")
 
-gui.Parent = player:WaitForChild("PlayerGui")
+-- Limpa uma versão anterior do hub
+local old = PLAYER_GUI:FindFirstChild("EclipseHubUI")
+if old then
+    old:Destroy()
+end
 
-local C = {
-    background = Color3.fromRGB(12, 12, 12),
-    panel = Color3.fromRGB(25, 25, 25),
-    panel2 = Color3.fromRGB(29, 29, 29),
-    stroke = Color3.fromRGB(190, 202, 205),
-    text = Color3.fromRGB(245, 245, 245),
-    muted = Color3.fromRGB(175, 175, 175),
+local THEME = {
+    Background = Color3.fromRGB(7, 7, 9),
+    Surface = Color3.fromRGB(12, 12, 15),
+    SurfaceHover = Color3.fromRGB(22, 22, 26),
+    Border = Color3.fromRGB(70, 70, 76),
+    BorderSoft = Color3.fromRGB(42, 42, 47),
+    Text = Color3.fromRGB(242, 242, 245),
+    Muted = Color3.fromRGB(145, 145, 153),
+    Accent = Color3.fromRGB(255, 255, 255),
 }
 
-local function round(instance, radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius)
-    corner.Parent = instance
-    return corner
-end
+local GAMES = {
+    "Blade Ball",
+    "BloxStrike",
+    "Doors",
+    "Dead Rails",
+    "Rivals",
+    "MM2",
+    "Sniper Arena",
+}
 
-local function outline(instance, thickness)
-    local s = Instance.new("UIStroke")
-    s.Color = C.stroke
-    s.Thickness = thickness or 1.4
-    s.Transparency = 0
-    s.Parent = instance
-    return s
-end
-
-local function makeLabel(parent, text, size, position, font, textSize)
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.Size = size
-    label.Position = position
-    label.Font = font or Enum.Font.GothamMedium
-    label.TextSize = textSize or 18
-    label.TextColor3 = C.text
-    label.TextXAlignment = Enum.TextXAlignment.Center
-    label.TextYAlignment = Enum.TextYAlignment.Center
-    label.Parent = parent
-    return label
-end
-
-local function makeButton(parent, text, size, position, textSize)
-    local b = Instance.new("TextButton")
-    b.AutoButtonColor = false
-    b.Text = text
-    b.Size = size
-    b.Position = position
-    b.BackgroundColor3 = C.panel2
-    b.BackgroundTransparency = 0.1
-    b.TextColor3 = C.text
-    b.Font = Enum.Font.GothamMedium
-    b.TextSize = textSize or 16
-    b.Parent = parent
-    round(b, 14)
-    outline(b, 1.0)
-    b.MouseEnter:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(48,48,48)}):Play()
-    end)
-    b.MouseLeave:Connect(function()
-        TweenService:Create(b, TweenInfo.new(0.12), {BackgroundColor3 = C.panel2}):Play()
-    end)
-    return b
-end
-
--- Barra pequena que permanece visível quando o hub está fechado.
-local pill = Instance.new("Frame")
-pill.Name = "EclipseToggle"
-pill.Size = UDim2.fromOffset(246, 51)
-pill.Position = UDim2.new(0.5, -123, 0, 28)
-pill.BackgroundColor3 = C.panel
-pill.Parent = gui
-round(pill, 26)
-outline(pill, 1.5)
-
-makeLabel(pill, "☾", UDim2.fromOffset(28, 42), UDim2.fromOffset(9, 4), Enum.Font.GothamMedium, 29)
-makeLabel(pill, "Eclipse Hub", UDim2.fromOffset(126, 42), UDim2.fromOffset(36, 4), Enum.Font.GothamMedium, 24)
-makeLabel(pill, "|", UDim2.fromOffset(12, 42), UDim2.fromOffset(163, 4), Enum.Font.GothamMedium, 24)
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.fromOffset(45, 43)
-toggleButton.Position = UDim2.new(1, -48, 0, 4)
-toggleButton.BackgroundTransparency = 1
-toggleButton.Text = "−"
-toggleButton.TextColor3 = C.text
-toggleButton.Font = Enum.Font.Gotham
-toggleButton.TextSize = 32
-toggleButton.Parent = pill
-
--- Painel principal.
-local main = Instance.new("Frame")
-main.Name = "MainPanel"
-main.Size = UDim2.new(0.72, 0, 0.60, 0)
-main.Position = UDim2.new(0.14, 0, 0.23, 0)
-main.BackgroundColor3 = C.panel
-main.BackgroundTransparency = 0.05
-main.Parent = gui
-round(main, 14)
-outline(main, 1.5)
-
-local sizeConstraint = Instance.new("UISizeConstraint")
-sizeConstraint.MinSize = Vector2.new(330, 270)
-sizeConstraint.MaxSize = Vector2.new(1050, 600)
-sizeConstraint.Parent = main
-
-local sidebar = Instance.new("Frame")
-sidebar.Name = "Sidebar"
-sidebar.BackgroundTransparency = 1
-sidebar.Size = UDim2.new(0, 166, 1, -20)
-sidebar.Position = UDim2.fromOffset(8, 10)
-sidebar.Parent = main
-
-local divider = Instance.new("Frame")
-divider.Size = UDim2.new(0, 2, 1, -92)
-divider.Position = UDim2.new(1, -3, 0, 14)
-divider.BackgroundColor3 = C.stroke
-divider.BorderSizePixel = 0
-divider.Parent = sidebar
-
-local games = {"Blade Ball", "BloxStrike", "Doors", "Dead Rails", "Rivals", "MM2", "Sniper Arena"}
-local selectedLabel = makeLabel(main, "Seleciona um jogo", UDim2.new(1, -205, 0, 32), UDim2.new(0, 190, 0, 48), Enum.Font.GothamMedium, 21)
-selectedLabel.TextColor3 = C.muted
-
-local hint = makeLabel(main, "O teu conteúdo aparece aqui", UDim2.new(1, -220, 0, 26), UDim2.new(0, 202, 0, 84), Enum.Font.GothamMedium, 16)
-hint.TextColor3 = C.muted
-
-local function onGameSelected(gameName)
-    selectedLabel.Text = gameName
-    hint.Text = "Espaço reservado para o módulo de " .. gameName
-    -- Liga aqui a interface ou funcionalidade legítima correspondente.
-end
-
--- Lista de jogos com scroll; fica sempre dentro da sidebar e acima do perfil.
-local gameList = Instance.new("ScrollingFrame")
-gameList.Name = "GameList"
-gameList.BackgroundTransparency = 1
-gameList.BorderSizePixel = 0
-gameList.Position = UDim2.fromOffset(4, 4)
-gameList.Size = UDim2.new(1, -12, 1, -76)
-gameList.CanvasSize = UDim2.new(0, 0, 0, 0)
-gameList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-gameList.ScrollingDirection = Enum.ScrollingDirection.Y
-gameList.ScrollBarThickness = 3
-gameList.ScrollBarImageColor3 = C.stroke
-gameList.Parent = sidebar
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 8)
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-listLayout.Parent = gameList
-
-local listPadding = Instance.new("UIPadding")
-listPadding.PaddingTop = UDim.new(0, 2)
-listPadding.PaddingBottom = UDim.new(0, 6)
-listPadding.PaddingLeft = UDim.new(0, 2)
-listPadding.PaddingRight = UDim.new(0, 2)
-listPadding.Parent = gameList
-
-for i, gameName in ipairs(games) do
-    local button = makeButton(gameList, gameName, UDim2.new(1, -8, 0, 34), UDim2.new(), 15)
-    button.LayoutOrder = i
-    button.Activated:Connect(function()
-        onGameSelected(gameName)
-    end)
-end
-
-local emptyButton = makeButton(gameList, "+", UDim2.new(1, -8, 0, 34), UDim2.new(), 16)
-emptyButton.LayoutOrder = #games + 1
-emptyButton.TextColor3 = C.muted
-emptyButton.Activated:Connect(function()
-    hint.Text = "Adiciona um jogo à lista no código Lua"
-end)
-
--- Cartão de perfil no canto inferior esquerdo.
-local profile = Instance.new("Frame")
-profile.Name = "ProfileCard"
-profile.Size = UDim2.new(1, -2, 0, 44)
-profile.Position = UDim2.new(0, 0, 1, -46)
-profile.BackgroundColor3 = C.panel2
-profile.BackgroundTransparency = 0.08
-profile.Parent = sidebar
-round(profile, 22)
-outline(profile, 1.4)
-
-local avatar = Instance.new("ImageLabel")
-avatar.Name = "Avatar"
-avatar.Size = UDim2.fromOffset(32, 32)
-avatar.Position = UDim2.fromOffset(5, 6)
-avatar.BackgroundColor3 = C.panel
-avatar.Parent = profile
-round(avatar, 24)
-outline(avatar, 1.2)
-
--- Usa a miniatura do avatar do jogador atual.
-task.spawn(function()
-    local ok, imageUrl = pcall(function()
-        local image, _ = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-        return image
-    end)
-    if ok then avatar.Image = imageUrl end
-end)
-
-makeLabel(profile, player.DisplayName, UDim2.new(1, -44, 0, 19), UDim2.fromOffset(41, 2), Enum.Font.GothamMedium, 12)
-makeLabel(profile, "♧  Lifetime", UDim2.new(1, -44, 0, 16), UDim2.fromOffset(41, 22), Enum.Font.GothamMedium, 10).TextColor3 = C.muted
-
-local minimize = makeButton(main, "−", UDim2.fromOffset(39, 39), UDim2.new(1, -105, 0, 19), 26)
-local close = makeButton(main, "×", UDim2.fromOffset(39, 39), UDim2.new(1, -57, 0, 19), 24)
-
+local selectedGame = nil
 local isOpen = true
+local isDragging = false
+local dragStart, startPosition
+
+local function make(className, properties, parent)
+    local object = Instance.new(className)
+    for key, value in pairs(properties or {}) do
+        object[key] = value
+    end
+    object.Parent = parent
+    return object
+end
+
+local function round(parent, radius)
+    return make("UICorner", {
+        CornerRadius = UDim.new(0, radius or 8)
+    }, parent)
+end
+
+local function stroke(parent, color, thickness, transparency)
+    return make("UIStroke", {
+        Color = color or THEME.Border,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+    }, parent)
+end
+
+local function tween(object, duration, properties)
+    local animation = TweenService:Create(
+        object,
+        TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        properties
+    )
+    animation:Play()
+    return animation
+end
+
+local gui = make("ScreenGui", {
+    Name = "EclipseHubUI",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+}, PLAYER_GUI)
+
+-- O contentor principal
+local main = make("Frame", {
+    Name = "Main",
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromOffset(330, 410),
+    BackgroundColor3 = THEME.Background,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, gui)
+round(main, 12)
+stroke(main, THEME.Border, 1, 0.08)
+
+-- Cabeçalho
+local header = make("Frame", {
+    Name = "Header",
+    Position = UDim2.fromOffset(0, 0),
+    Size = UDim2.new(1, 0, 0, 54),
+    BackgroundColor3 = THEME.Background,
+    BorderSizePixel = 0,
+}, main)
+
+local title = make("TextLabel", {
+    Name = "Title",
+    Position = UDim2.fromOffset(17, 0),
+    Size = UDim2.new(1, -85, 1, 0),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamMedium,
+    Text = "Eclipse Hub",
+    TextColor3 = THEME.Text,
+    TextSize = 17,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, header)
+
+local closeButton = make("TextButton", {
+    Name = "CloseButton",
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -14, 0.5, 0),
+    Size = UDim2.fromOffset(26, 26),
+    BackgroundColor3 = THEME.Surface,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Font = Enum.Font.Gotham,
+    Text = "−",
+    TextColor3 = THEME.Text,
+    TextSize = 20,
+}, header)
+round(closeButton, 7)
+stroke(closeButton, THEME.BorderSoft, 1, 0.1)
+
+local headerLine = make("Frame", {
+    Position = UDim2.new(0, 14, 1, -1),
+    Size = UDim2.new(1, -28, 0, 1),
+    BackgroundColor3 = THEME.BorderSoft,
+    BorderSizePixel = 0,
+}, header)
+
+-- Área principal
+local body = make("Frame", {
+    Name = "Body",
+    Position = UDim2.fromOffset(14, 65),
+    Size = UDim2.new(1, -28, 1, -151),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+}, main)
+
+local sectionTitle = make("TextLabel", {
+    Name = "SectionTitle",
+    Size = UDim2.new(1, 0, 0, 22),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamMedium,
+    Text = "Selecionar jogo",
+    TextColor3 = THEME.Muted,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, body)
+
+local gameList = make("ScrollingFrame", {
+    Name = "GameList",
+    Position = UDim2.fromOffset(0, 28),
+    Size = UDim2.new(1, 0, 1, -28),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 3,
+    ScrollBarImageColor3 = THEME.Border,
+    CanvasSize = UDim2.new(0, 0, 0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y,
+    ScrollingDirection = Enum.ScrollingDirection.Y,
+}, body)
+
+make("UIListLayout", {
+    Padding = UDim.new(0, 7),
+    SortOrder = Enum.SortOrder.LayoutOrder,
+}, gameList)
+
+make("UIPadding", {
+    PaddingRight = UDim.new(0, 3),
+    PaddingBottom = UDim.new(0, 3),
+}, gameList)
+
+local gameButtons = {}
+
+local function setSelected(gameName)
+    selectedGame = gameName
+    for name, button in pairs(gameButtons) do
+        local active = name == gameName
+        tween(button, 0.12, {
+            BackgroundColor3 = active and THEME.SurfaceHover or THEME.Surface
+        })
+        local outline = button:FindFirstChildOfClass("UIStroke")
+        if outline then
+            tween(outline, 0.12, {
+                Color = active and THEME.Text or THEME.BorderSoft,
+                Transparency = active and 0.12 or 0.25,
+            })
+        end
+        local indicator = button:FindFirstChild("Indicator")
+        if indicator then
+            indicator.Visible = active
+        end
+    end
+    statusLabel.Text = gameName and ("Selecionado: " .. gameName) or "Seleciona um jogo"
+end
+
+for index, gameName in ipairs(GAMES) do
+    local button = make("TextButton", {
+        Name = gameName:gsub("%W", "") .. "Button",
+        Size = UDim2.new(1, -4, 0, 37),
+        BackgroundColor3 = THEME.Surface,
+        BorderSizePixel = 0,
+        AutoButtonColor = false,
+        Font = Enum.Font.Gotham,
+        Text = "",
+        LayoutOrder = index,
+    }, gameList)
+    round(button, 7)
+    stroke(button, THEME.BorderSoft, 1, 0.25)
+
+    make("TextLabel", {
+        Name = "GameName",
+        Position = UDim2.fromOffset(12, 0),
+        Size = UDim2.new(1, -44, 1, 0),
+        BackgroundTransparency = 1,
+        Font = Enum.Font.Gotham,
+        Text = gameName,
+        TextColor3 = THEME.Text,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, button)
+
+    local indicator = make("Frame", {
+        Name = "Indicator",
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        Size = UDim2.fromOffset(5, 5),
+        BackgroundColor3 = THEME.Text,
+        BorderSizePixel = 0,
+        Visible = false,
+    }, button)
+    round(indicator, 5)
+
+    button.MouseEnter:Connect(function()
+        if selectedGame ~= gameName then
+            tween(button, 0.12, {BackgroundColor3 = THEME.SurfaceHover})
+        end
+    end)
+    button.MouseLeave:Connect(function()
+        if selectedGame ~= gameName then
+            tween(button, 0.12, {BackgroundColor3 = THEME.Surface})
+        end
+    end)
+    button.Activated:Connect(function()
+        setSelected(gameName)
+    end)
+
+    gameButtons[gameName] = button
+end
+
+-- Separador inferior
+local footerLine = make("Frame", {
+    Name = "FooterLine",
+    Position = UDim2.new(0, 14, 1, -77),
+    Size = UDim2.new(1, -28, 0, 1),
+    BackgroundColor3 = THEME.BorderSoft,
+    BorderSizePixel = 0,
+}, main)
+
+-- Cartão de perfil
+local profile = make("Frame", {
+    Name = "ProfileCard",
+    Position = UDim2.new(0, 14, 1, -65),
+    Size = UDim2.new(1, -28, 0, 50),
+    BackgroundColor3 = THEME.Surface,
+    BorderSizePixel = 0,
+}, main)
+round(profile, 8)
+stroke(profile, THEME.BorderSoft, 1, 0.18)
+
+local avatar = make("ImageLabel", {
+    Name = "Avatar",
+    Position = UDim2.fromOffset(9, 8),
+    Size = UDim2.fromOffset(32, 32),
+    BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+    BorderSizePixel = 0,
+    Image = "",
+}, profile)
+round(avatar, 16)
+
+task.spawn(function()
+    local ok, image = pcall(function()
+        return Players:GetUserThumbnailAsync(
+            player.UserId,
+            Enum.ThumbnailType.HeadShot,
+            Enum.ThumbnailSize.Size100x100
+        )
+    end)
+    if ok and avatar.Parent then
+        avatar.Image = image
+    end
+end)
+
+make("TextLabel", {
+    Name = "PlayerName",
+    Position = UDim2.fromOffset(50, 7),
+    Size = UDim2.new(1, -118, 0, 18),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamMedium,
+    Text = player.DisplayName,
+    TextColor3 = THEME.Text,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+}, profile)
+
+make("TextLabel", {
+    Name = "KeyStatus",
+    Position = UDim2.fromOffset(50, 25),
+    Size = UDim2.new(1, -118, 0, 14),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "Lifetime",
+    TextColor3 = THEME.Muted,
+    TextSize = 10,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, profile)
+
+local profileDot = make("Frame", {
+    Name = "StatusDot",
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -12, 0.5, 0),
+    Size = UDim2.fromOffset(5, 5),
+    BackgroundColor3 = Color3.fromRGB(220, 220, 225),
+    BorderSizePixel = 0,
+}, profile)
+round(profileDot, 5)
+
+-- Estado/seleção: texto pequeno e discreto
+local statusLabel = make("TextLabel", {
+    Name = "SelectionStatus",
+    Position = UDim2.new(0, 14, 1, -91),
+    Size = UDim2.new(1, -28, 0, 12),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "Seleciona um jogo",
+    TextColor3 = THEME.Muted,
+    TextSize = 9,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+}, main)
+
+-- Cápsula apresentada quando o hub está fechado
+local compact = make("TextButton", {
+    Name = "CompactHub",
+    AnchorPoint = Vector2.new(0.5, 0),
+    Position = UDim2.new(0.5, 0, 0, 24),
+    Size = UDim2.fromOffset(142, 36),
+    BackgroundColor3 = THEME.Background,
+    BorderSizePixel = 0,
+    AutoButtonColor = false,
+    Text = "",
+    Visible = false,
+    ZIndex = 10,
+}, gui)
+round(compact, 18)
+stroke(compact, THEME.Border, 1, 0.08)
+
+make("Frame", {
+    Name = "CompactDot",
+    Position = UDim2.fromOffset(12, 14),
+    Size = UDim2.fromOffset(7, 7),
+    BackgroundColor3 = THEME.Text,
+    BorderSizePixel = 0,
+    ZIndex = 11,
+}, compact)
+round(compact.CompactDot, 7)
+
+make("TextLabel", {
+    Name = "CompactTitle",
+    Position = UDim2.fromOffset(26, 0),
+    Size = UDim2.new(1, -52, 1, 0),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.GothamMedium,
+    Text = "Eclipse Hub",
+    TextColor3 = THEME.Text,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Center,
+    ZIndex = 11,
+}, compact)
+
+make("TextLabel", {
+    Name = "CompactExpand",
+    AnchorPoint = Vector2.new(1, 0.5),
+    Position = UDim2.new(1, -10, 0.5, 0),
+    Size = UDim2.fromOffset(10, 16),
+    BackgroundTransparency = 1,
+    Font = Enum.Font.Gotham,
+    Text = "+",
+    TextColor3 = THEME.Muted,
+    TextSize = 15,
+    ZIndex = 11,
+}, compact)
+
 local function setOpen(open)
     isOpen = open
-    main.Visible = open
-    toggleButton.Text = open and "−" or "+"
-end
-
-toggleButton.Activated:Connect(function()
-    setOpen(not isOpen)
-end)
-minimize.Activated:Connect(function()
-    setOpen(false)
-end)
-close.Activated:Connect(function()
-    setOpen(false)
-end)
-
--- Arrastar a barra superior para reposicionar o hub.
-local dragging = false
-local dragInput, dragStart, startPos
-pill.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = pill.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+    if open then
+        compact.Visible = false
+        main.Visible = true
+        main.Size = UDim2.fromOffset(330, 30)
+        tween(main, 0.22, {Size = UDim2.fromOffset(330, 410)})
+    else
+        tween(main, 0.16, {Size = UDim2.fromOffset(330, 0)})
+        task.delay(0.16, function()
+            if not isOpen and main.Parent then
+                main.Visible = false
+                compact.Visible = true
+            end
         end)
     end
+end
+
+closeButton.Activated:Connect(function()
+    setOpen(false)
 end)
-pill.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
+
+compact.Activated:Connect(function()
+    setOpen(true)
+end)
+
+-- Arrastar o painel pelo cabeçalho
+header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = true
+        dragStart = input.Position
+        startPosition = main.Position
     end
 end)
+
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and input == dragInput then
+    if isDragging and (
+        input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch
+    ) then
         local delta = input.Position - dragStart
-        pill.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        main.Position = UDim2.new(
+            startPosition.X.Scale,
+            startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale,
+            startPosition.Y.Offset + delta.Y
+        )
     end
 end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        isDragging = false
+    end
+end)
+
+-- Tecla RightShift alterna o painel no PC
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then
+        return
+    end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        setOpen(not isOpen)
+    end
+end)
+
+-- Seleção inicial opcional
+setSelected(nil)
