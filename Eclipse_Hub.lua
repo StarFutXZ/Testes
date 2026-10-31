@@ -18,8 +18,8 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local C = {
     background = Color3.fromRGB(12, 12, 12),
     panel = Color3.fromRGB(25, 25, 25),
-    panel2 = Color3.fromRGB(32, 32, 32),
-    stroke = Color3.fromRGB(210, 224, 226),
+    panel2 = Color3.fromRGB(29, 29, 29),
+    stroke = Color3.fromRGB(190, 202, 205),
     text = Color3.fromRGB(245, 245, 245),
     muted = Color3.fromRGB(175, 175, 175),
 }
@@ -46,7 +46,7 @@ local function makeLabel(parent, text, size, position, font, textSize)
     label.Text = text
     label.Size = size
     label.Position = position
-    label.Font = font or Enum.Font.Garamond
+    label.Font = font or Enum.Font.GothamMedium
     label.TextSize = textSize or 18
     label.TextColor3 = C.text
     label.TextXAlignment = Enum.TextXAlignment.Center
@@ -64,11 +64,11 @@ local function makeButton(parent, text, size, position, textSize)
     b.BackgroundColor3 = C.panel2
     b.BackgroundTransparency = 0.1
     b.TextColor3 = C.text
-    b.Font = Enum.Font.Garamond
-    b.TextSize = textSize or 18
+    b.Font = Enum.Font.GothamMedium
+    b.TextSize = textSize or 16
     b.Parent = parent
-    round(b, 20)
-    outline(b, 1.4)
+    round(b, 14)
+    outline(b, 1.0)
     b.MouseEnter:Connect(function()
         TweenService:Create(b, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(48,48,48)}):Play()
     end)
@@ -88,9 +88,9 @@ pill.Parent = gui
 round(pill, 26)
 outline(pill, 1.5)
 
-makeLabel(pill, "☾", UDim2.fromOffset(28, 42), UDim2.fromOffset(9, 4), Enum.Font.Garamond, 29)
-makeLabel(pill, "Eclipse Hub", UDim2.fromOffset(126, 42), UDim2.fromOffset(36, 4), Enum.Font.Garamond, 24)
-makeLabel(pill, "|", UDim2.fromOffset(12, 42), UDim2.fromOffset(163, 4), Enum.Font.Garamond, 24)
+makeLabel(pill, "☾", UDim2.fromOffset(28, 42), UDim2.fromOffset(9, 4), Enum.Font.GothamMedium, 29)
+makeLabel(pill, "Eclipse Hub", UDim2.fromOffset(126, 42), UDim2.fromOffset(36, 4), Enum.Font.GothamMedium, 24)
+makeLabel(pill, "|", UDim2.fromOffset(12, 42), UDim2.fromOffset(163, 4), Enum.Font.GothamMedium, 24)
 local toggleButton = Instance.new("TextButton")
 toggleButton.Name = "ToggleButton"
 toggleButton.Size = UDim2.fromOffset(45, 43)
@@ -105,8 +105,8 @@ toggleButton.Parent = pill
 -- Painel principal.
 local main = Instance.new("Frame")
 main.Name = "MainPanel"
-main.Size = UDim2.new(0.74, 0, 0.62, 0)
-main.Position = UDim2.new(0.13, 0, 0.22, 0)
+main.Size = UDim2.new(0.72, 0, 0.60, 0)
+main.Position = UDim2.new(0.14, 0, 0.23, 0)
 main.BackgroundColor3 = C.panel
 main.BackgroundTransparency = 0.05
 main.Parent = gui
@@ -121,7 +121,7 @@ sizeConstraint.Parent = main
 local sidebar = Instance.new("Frame")
 sidebar.Name = "Sidebar"
 sidebar.BackgroundTransparency = 1
-sidebar.Size = UDim2.new(0, 158, 1, -20)
+sidebar.Size = UDim2.new(0, 166, 1, -20)
 sidebar.Position = UDim2.fromOffset(8, 10)
 sidebar.Parent = main
 
@@ -133,10 +133,10 @@ divider.BorderSizePixel = 0
 divider.Parent = sidebar
 
 local games = {"Blade Ball", "BloxStrike", "Doors", "Dead Rails", "Rivals", "MM2", "Sniper Arena"}
-local selectedLabel = makeLabel(main, "Seleciona um jogo", UDim2.new(1, -190, 0, 32), UDim2.new(0, 178, 0, 48), Enum.Font.Garamond, 21)
+local selectedLabel = makeLabel(main, "Seleciona um jogo", UDim2.new(1, -205, 0, 32), UDim2.new(0, 190, 0, 48), Enum.Font.GothamMedium, 21)
 selectedLabel.TextColor3 = C.muted
 
-local hint = makeLabel(main, "O teu conteúdo aparece aqui", UDim2.new(1, -205, 0, 26), UDim2.new(0, 190, 0, 84), Enum.Font.Garamond, 16)
+local hint = makeLabel(main, "O teu conteúdo aparece aqui", UDim2.new(1, -220, 0, 26), UDim2.new(0, 202, 0, 84), Enum.Font.GothamMedium, 16)
 hint.TextColor3 = C.muted
 
 local function onGameSelected(gameName)
@@ -160,7 +160,7 @@ gameList.ScrollBarImageColor3 = C.stroke
 gameList.Parent = sidebar
 
 local listLayout = Instance.new("UIListLayout")
-listLayout.Padding = UDim.new(0, 9)
+listLayout.Padding = UDim.new(0, 8)
 listLayout.SortOrder = Enum.SortOrder.LayoutOrder
 listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 listLayout.Parent = gameList
@@ -173,7 +173,7 @@ listPadding.PaddingRight = UDim.new(0, 2)
 listPadding.Parent = gameList
 
 for i, gameName in ipairs(games) do
-    local button = makeButton(gameList, gameName, UDim2.new(1, -8, 0, 36), UDim2.new(), 16)
+    local button = makeButton(gameList, gameName, UDim2.new(1, -8, 0, 34), UDim2.new(), 15)
     button.LayoutOrder = i
     button.Activated:Connect(function()
         onGameSelected(gameName)
@@ -190,8 +190,8 @@ end)
 -- Cartão de perfil no canto inferior esquerdo.
 local profile = Instance.new("Frame")
 profile.Name = "ProfileCard"
-profile.Size = UDim2.new(1, -2, 0, 48)
-profile.Position = UDim2.new(0, 0, 1, -50)
+profile.Size = UDim2.new(1, -2, 0, 44)
+profile.Position = UDim2.new(0, 0, 1, -46)
 profile.BackgroundColor3 = C.panel2
 profile.BackgroundTransparency = 0.08
 profile.Parent = sidebar
@@ -200,7 +200,7 @@ outline(profile, 1.4)
 
 local avatar = Instance.new("ImageLabel")
 avatar.Name = "Avatar"
-avatar.Size = UDim2.fromOffset(36, 36)
+avatar.Size = UDim2.fromOffset(32, 32)
 avatar.Position = UDim2.fromOffset(5, 6)
 avatar.BackgroundColor3 = C.panel
 avatar.Parent = profile
@@ -216,8 +216,8 @@ task.spawn(function()
     if ok then avatar.Image = imageUrl end
 end)
 
-makeLabel(profile, player.DisplayName, UDim2.new(1, -48, 0, 21), UDim2.fromOffset(44, 3), Enum.Font.Garamond, 14)
-makeLabel(profile, "♧  Lifetime", UDim2.new(1, -48, 0, 17), UDim2.fromOffset(44, 24), Enum.Font.Garamond, 11).TextColor3 = C.muted
+makeLabel(profile, player.DisplayName, UDim2.new(1, -44, 0, 19), UDim2.fromOffset(41, 2), Enum.Font.GothamMedium, 12)
+makeLabel(profile, "♧  Lifetime", UDim2.new(1, -44, 0, 16), UDim2.fromOffset(41, 22), Enum.Font.GothamMedium, 10).TextColor3 = C.muted
 
 local minimize = makeButton(main, "−", UDim2.fromOffset(39, 39), UDim2.new(1, -105, 0, 19), 26)
 local close = makeButton(main, "×", UDim2.fromOffset(39, 39), UDim2.new(1, -57, 0, 19), 24)
